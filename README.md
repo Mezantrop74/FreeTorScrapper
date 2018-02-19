@@ -167,7 +167,7 @@ If you get something likes to privoxy localhost port forwarding don't continue, 
 
     . push.sh someoniondirectory.onion
 
-if you have some errors, that is link to a missing module, do one of theses commands write the one that is link to your error(s). Need to do it as normal user in your virutal envir not as sudo.
+If you have errors, that are link to a missing module, do one of theses commands write the one that is link to your error(s).
 
     pip install scrapy
     pip install flask
