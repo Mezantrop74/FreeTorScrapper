@@ -126,7 +126,9 @@ Need a modification to be able to connect elasticsearh with our database.
 
 ### Config your files
 Edit etc/database for your database setup
+
 Edit etc/tor/torrc to uncomment the line : SocksPort 9050 (line 18)
+
 Edit etc/proxy for your TOR setup
 
     export TOR_PROXY_PORT=3129
