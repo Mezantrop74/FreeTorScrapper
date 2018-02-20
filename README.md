@@ -132,6 +132,8 @@ Edit `etc/database` for your database setup
 
 Edit `etc/tor/torrc` to uncomment the line : SocksPort 9050 (line 18)
 
+Edit `etc/uwsgi_only` and set BASEDIR to wherever torscraper is installed (i.e. /home/user/torscraper)
+
 Edit `etc/proxy` for your TOR setup
 
     export TOR_PROXY_PORT=3129
@@ -161,9 +163,7 @@ Edit `etc/proxy` for your TOR setup
 Go in the scripts folder and run this command
 
     ./create_privoxy_confs.sh
-    
-Go in the init folder
-
+   
 Now it's time to try. Go in folder for the first time .../freshonions-torscraper/scripts/
 
     ./start.sh
@@ -208,9 +208,7 @@ To try if it works well for now.
 
     scripts/push.sh someoniondirectory.onion
     scripts/push.sh anotheroniondirectory.onion
-
-Edit `etc/uwsgi_only` and set BASEDIR to wherever torscraper is installed (i.e. /home/user/torscraper)
-
+    
 Run:
 
     script/harvest.sh # to get onions (just detect the onions, dont go deep to find bitcoin address, emails, etc.)
@@ -239,12 +237,6 @@ After restart :
 
 ### FLASK :
     . /home/fr../scripts/web.sh   #launch flask to have a web interface
-
-### Complementary  
-    mkdir /home/fr../etc/private
-    mkdir /home/fr../var
-    cd /home/fr../scripts/
-    . create_flask_secret.sh
 
 ### Cronjobs
 
