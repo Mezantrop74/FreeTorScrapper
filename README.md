@@ -43,7 +43,9 @@ After a boot, be sure that the link between Tor and Privoxy is working.
 
     curl --socks5-hostname 127.0.0.1:9050 http://http://workingOnionWebsite
     curl --proxy 127.0.0.1:3129 http://workingOnionWebsite
+    
 If they don't work just fix the problem before crawling, because all your onion will become to a "dead" status 
+
 ### Tor browser Linux (Complementary)
 To test website before crawling (install this to have an interface and to have a better visualisation) Important!! Tor browser need and interface... don't install this on a console
 
@@ -52,12 +54,13 @@ To test website before crawling (install this to have an interface and to have a
 * edit tor-browser_en-US/start-tor-browser to be able to open it.
 
 
-  Change this
-
+Change this
+  
     if [ "`id -u`" -eq 0 ]; then
         complain "The Tor Browser Bundle should not be run as root.  Exiting."
         exit 1
-    fi
+    fi  
+    
 
 To :
 
@@ -125,11 +128,11 @@ Need a modification to be able to connect elasticsearh with our database.
     mysql -u root -p
 
 ### Config your files
-Edit etc/database for your database setup
+Edit `etc/database` for your database setup
 
-Edit etc/tor/torrc to uncomment the line : SocksPort 9050 (line 18)
+Edit `etc/tor/torrc` to uncomment the line : SocksPort 9050 (line 18)
 
-Edit etc/proxy for your TOR setup
+Edit `etc/proxy` for your TOR setup
 
     export TOR_PROXY_PORT=3129
     #export TOR_PROXY_PORT=3140
@@ -206,7 +209,7 @@ To try if it works well for now.
     scripts/push.sh someoniondirectory.onion
     scripts/push.sh anotheroniondirectory.onion
 
-Edit etc/uwsgi_only and set BASEDIR to wherever torscraper is installed (i.e. /home/user/torscraper)
+Edit `etc/uwsgi_only` and set BASEDIR to wherever torscraper is installed (i.e. /home/user/torscraper)
 
 Run:
 
@@ -216,9 +219,11 @@ Run:
     
 ### Optional ElasticSearch Fulltext Search
 
-The torscraper comes with optional elasticsearch capability (enabled by default). Edit etc/elasticsearch and set vars or set ELASTICSEARCH_ENABLED=false to disable. Run scripts/elasticsearch_migrate.sh to perform the initial setup after configuration.
+The torscraper comes with optional elasticsearch capability (enabled by default). Edit `etc/elasticsearch` and set vars or set `ELASTICSEARCH_ENABLED=false` to disable. 
 
-if elasticsearch is disabled there will be no fulltext search, however crawling and discovering new sites will still work.
+Run `scripts/elasticsearch_migrate.sh` to perform the initial setup after configuration.
+
+If elasticsearch is disabled there will be no fulltext search, however crawling and discovering new sites will still work.
 
 
 ### ElasticSearch
