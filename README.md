@@ -159,6 +159,8 @@ Edit `etc/proxy` for your TOR setup
     service tor start
     service privoxy start
     service haproxy start
+    service elasticsearch start
+    service mysql start
 
 Go in the scripts folder and run this command
 
@@ -201,6 +203,12 @@ If elasticsearch is disabled there will be no fulltext search, however crawling 
 
 
 ### ElasticSearch
+You will need to install Elasticsearch(probably not only the pip package), this is the link to download the last version of 5.x. https://www.elastic.co/downloads/past-releases/elasticsearch-5-6-6 . You can have problems with versions (like I said in the warning section). If you want to be sure you are usign the right version, you can do this command :
+
+    curl -XGET 'http://localhost:9200'
+
+Or you can go on http:localhost:9200 with your browser. ** 9200 is the default port for elasticsearch, if you changed it, use your **
+
 To enable Elasticsearch
 
     service elasticsearch start
