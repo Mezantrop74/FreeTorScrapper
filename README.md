@@ -170,31 +170,7 @@ Now it's time to try. Go in folder for the first time .../freshonions-torscraper
     
 If you get something likes to privoxy localhost port forwarding don't continue, it will not work.
 
-    . push.sh someoniondirectory.onion
-
-If you have errors, that are link to a missing module, do one of theses commands write the one that is link to your error(s).
-
-    pip install scrapy
-    pip install flask
-    pip install app
-    pip install timeout_decorator
-    pip install python-dateutil
-    pip install pretty
-    pip install pymysql
-    pip installcrypto
-    pip install SHA256
-    pip install pycountry
-    pip install langdetect
-    pip install python-memcached
-    pip install pycrypto
-    pip install twisted
-    pip install txsocksx
-    pip install tabulate
-    pip install gensim
-    pip install sklearn
-    pip install networkx
-    pip install paramiko
-    pip install 'PyPyDispatcher>=2.1.0'
+    ./push.sh someoniondirectory.onion
 
 To start the flask server to see our web interface.
 
@@ -211,9 +187,9 @@ To try if it works well for now.
     
 Run:
 
-    script/harvest.sh # to get onions (just detect the onions, dont go deep to find bitcoin address, emails, etc.)
-    init/scraper_service.sh # to start crawling (will get bitcoin address, emails, etc. if you already found onions with harvest.sh)
-    init/isup_service.sh # to keep site status up to date
+    script/harvest.sh  #To get onions (just detect the onions, dont go deep to find bitcoin address, emails, etc.)
+    init/scraper_service.sh  #To start crawling (will get bitcoin address, emails, etc. if you already found onions with harvest.sh)
+    init/isup_service.sh  #To keep site status up to date
     
 ### Optional ElasticSearch Fulltext Search
 
@@ -233,35 +209,35 @@ To enable Elasticsearch
 After restart :
 
     . venv/bin/activate
-    ./script/start.sh #to start the instance of tor and privoxy
+    ./script/start.sh  #To start the instance of tor and privoxy
 
 ### FLASK :
-    . /home/fr../scripts/web.sh   #launch flask to have a web interface
+    ./scripts/web.sh  #Launch flask to have a web interface
 
 ### Cronjobs
 
-    # harvest onions from various sources
+    #Harvest onions from various sources
     1 18 * * * /home/freshonions-torscraper/scripts/harvest.sh
 
-    # get ssh fingerprints for new sites
+    #Get ssh fingerprints for new sites
     1 4,16 * * * /home/freshonions-torscraper/scripts/update_fingerprints.sh
 
-    # mark sites as genuine / fake from the /r/darknetmarkets superlist
+    #Mark sites as genuine / fake from the /r/darknetmarkets superlist
     1 1 * * 1 /home/freshonions-torscraper/scripts/get_valid.sh
 
-    # scrape pastebin for onions (needs paid account / IP whitelisting)
+    #Scrape pastebin for onions (needs paid account / IP whitelisting)
     */5 * * * * /home/freshonions-torscraper/scripts/pastebin.sh
 
-    # portscan new onions
+    #Portscan new onions
     1 13 * * * /home/freshonions-torscraper/scripts/portscan_up.sh
 
-    # scrape stronghold paste
+    #Scrape stronghold paste
     32 */2 * * * /home/freshonions-torscraper/scripts/stronghold_paste_rip.sh
 
-    # detect clones
+    #Detect clones
     20 14 * * * /home/freshonions-torscraper/scripts/detect_clones.sh
 
-    #keep a sql dump of data
+    #Keep a sql dump of data
     1 */1 * * * mysqldump -u username -ppassword --database tor --result-file=/home/dump.sql
     1 */8 * * * mysqldump -u username -ppassword --database tor --result-file=/home/dump_backup.sql
 
