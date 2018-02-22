@@ -17,3 +17,13 @@ pycountry
 networkx
 python-memcached
 pillow
+flask
+app
+timeout_decorator
+pretty
+crypto
+SHA256
+gensim
+sklearn
+paramiko
+'PyPyDispatcher>=2.1.0'
