@@ -207,8 +207,6 @@ You will need to install Elasticsearch(probably not only the pip package), this 
 
     curl -XGET 'http://localhost:9200'
 
-Or you can go on http:localhost:9200 with your browser. ** 9200 is the default port for elasticsearch, if you changed it, use your **
-
 To enable Elasticsearch
 
     service elasticsearch start
