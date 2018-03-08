@@ -1,3 +1,4 @@
+
 # Fresh Onions TOR Hidden Service Crawler
 
 This is a copy of the source for the http://zlal32teyptf4tvi.onion hidden service, which implements a tor hidden service crawler / spider and web site.
@@ -72,8 +73,28 @@ To :
 * click on Tor Browser file and click on connect.
 
 ### Tor service
+To use the new version of tor, you should follow these step : https://www.torproject.org/docs/debian.html.en
+By using the last version of tor, you will be able to crawler the new generation of onions (V3).
 
-    sudo apt-get install tor
+If you used an older version thant 0.3.x, you can have a problem during the update to 0.3.x. I was missing two  library : 
+ 
+ * libssl1.1
+ * libzstd1
+
+So, I installed them:
+	
+	sudo apt-get install libzstd1
+To install libssl1.1, I used a debian package : https://packages.ubuntu.com/bionic/libssl1.1
+	
+	lynx  https://packages.ubuntu.com/bionic/libssl1.1
+Use the bottom arrow to go at the bottom of the page and select you "Architecture Package Size". When you had made your choice, click on the right arrow, it will transfert you to the download page. Now it's the same thing. Use the bottom arrow to go down and choose the one that you want. When you find the one, juste click on the right arrow. At the bottom of your interface, you will `D) Download or C) Cancel`. Press `D`. When you will see the `Save to disk`, go on it. Press the right arrow and  press on Enter. When it's done click on `q` and `y` to quit.
+	
+	dpkg -i libssl1.1_1.1.0g-2ubuntu2_amd64.deb #the name of your debain package
+
+Finish the tor installation by looking to your version. If you have the last one (0.3.2 at the time that I wrote it).
+	
+	tor --version
+
 
 ### Haproxy service
 
@@ -170,6 +191,11 @@ Now it's time to try. Go in folder for the first time .../freshonions-torscraper
 
     ./start.sh
     
+Now you can test if it works with new generation of onions (V3) (test all ports 9051, 9052, 90... and 3129, 3130, 31...)
+	
+		curl --socks5-hostname 127.0.0.1:9051 http://jamie3vkiwibfiwucd6vxijskbhpjdyajmzeor4mc4i7yopvpo4p7cyd.onion/
+		curl --proxy 127.0.0.1:3129 http://jamie3vkiwibfiwucd6vxijskbhpjdyajmzeor4mc4i7yopvpo4p7cyd.onion/
+		
 If you get something likes to privoxy localhost port forwarding don't continue, it will not work.
 
     ./push.sh someoniondirectory.onion
@@ -206,8 +232,6 @@ If elasticsearch is disabled there will be no fulltext search, however crawling 
 You will need to install Elasticsearch(probably not only the pip package), this is the link to download the last version of 5.x. https://www.elastic.co/downloads/past-releases/elasticsearch-5-6-6 . You can have problems with versions (like I said in the warning section). If you want to be sure you are usign the right version, you can do this command :
 
     curl -XGET 'http://localhost:9200'
-
-Or you can go on http:localhost:9200 with your browser. ** 9200 is the default port for elasticsearch, if you changed it, use your **
 
 To enable Elasticsearch
 
@@ -259,3 +283,4 @@ The solution to this problem is running multiple TOR instances and connecting to
 Debian (and ubuntu) comes with a useful program "tor-instance-create" for quickly creating multiple instances of TOR. I used Squid as my frontend proxy, but unfortunately it can't connect to SOCKS directly, so I used "privoxy" as an intermediate proxy. You will need one privoxy instance for every TOR instance. There is a script in "scripts/create_privoxy.sh" to help with creating privoxy instances on debian systems. It also helps to replace /etc/privoxy/default.filter with an empty file, to reduce CPU load by removing unnecessary regexes.
 
 Additionally, this resource https://www.howtoforge.com/ultimate-security-proxy-with-tor might be useful in setting up squid. If all you are doing is crawling and don't care about anonymity, I also recommend running TOR in tor2web mode (required recompilation) for increased speed
+
