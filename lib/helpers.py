@@ -67,7 +67,8 @@ def maybe_search_redirect(search):
 		search = parsedurl.hostname
 	if search != "":
 		if re.match('.*\.onion$', search):
-			return redirect(url_for("onion_info",onion=search), code=302)
+			search = search.replace(" ","")
+                        return redirect(url_for("onion_info",onion=search), code=302)
 		elif re.match(email_util.REGEX_ALL, search):
 			return redirect(url_for("email_list",addr=search), code=302)
 		elif bitcoin.is_valid(search):
