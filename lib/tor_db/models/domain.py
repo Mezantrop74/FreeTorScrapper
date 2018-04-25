@@ -54,6 +54,16 @@ class Domain(db.Entity):
     description_json = Optional(Json)
     description_json_at = Required(datetime, default=NEVER)
     web_components  = Set("WebComponent", table="web_component_link", reverse="domains", column="web_component")
+    '''
+    def __init__(self):
+        _login_forms = None
+
+    def get_login_forms(self):
+        return self._login_forms
+
+    def set_login_forms(self, value):
+        self._login_forms = value
+    '''
 
     @classmethod
     def random(klass, number=1000):
@@ -87,8 +97,20 @@ class Domain(db.Entity):
             paths += select(p.path for p in tor_db.models.page.Page if p.domain==self and p.path in interesting_paths.PATHS_PHP and p.code in [200, 206])
         return paths
 
+    @db_session
+    def login_paths(self):
+        paths = []
+        paths += select(p.path for p in tor_db.models.page.Page if p.domain==self and p.contains_login == 1 and p.code in [200, 206])
+        return paths
+
+    @db_session
+    def captcha_paths(self):
+        paths = []
+        paths += select(p.path for p in tor_db.models.page.Page if p.domain==self and p.contains_captcha == 1 and p.code in [200, 206])
+        return paths
+
     def canonical_path(self):
-        return "/onion/%s" % self.host    
+        return "/onion/%s" % self.host
 
 
     def construct_url(self, path):
@@ -127,10 +149,9 @@ class Domain(db.Entity):
     def hide_banned(klass, domains):
         return [d for d in domains if not d.is_banned]
 
-
     def before_insert(self):
         if (self.title.find("Site Hosted by Freedom Hosting II") != -1 or
-            self.title.find("Freedom Hosting II - hacked") != -1 or 
+            self.title.find("Freedom Hosting II - hacked") != -1 or
             self.title.find("This site is hosted by Freedom Hosting III") != -1 or
             self.title.find("The Onion Farm") != -1 or
             self.title.find("Site hosted by Daniel's hosting service") != -1):
@@ -150,16 +171,14 @@ class Domain(db.Entity):
         if banned.contains_banned(self.title) and not self.ban_exempt:
             self.is_banned = True
 
-        if is_elasticsearch_enabled():
-            dom = DomainDocType.from_obj(self)
-            dom.save()
-
-        
+        #if is_elasticsearch_enabled():
+            #dom = DomainDocType.from_obj(self)
+            #dom.save()
 
 
     def before_update(self):
         if (self.title.find("Site Hosted by Freedom Hosting II") != -1 or
-            self.title.find("Freedom Hosting II - hacked") != -1 or 
+            self.title.find("Freedom Hosting II - hacked") != -1 or
             self.title.find("This site is hosted by Freedom Hosting III") != -1 or
             self.title.find("The Onion Farm") != -1 or
             self.title.find("Site hosted by Daniel's hosting service") != -1):
@@ -167,7 +186,7 @@ class Domain(db.Entity):
         else:
             self.is_crap = False
 
-        if not self.is_genuine and len(self.title) > 8 and not self.title in ["Entry Point", "Login", "404 Not Found", "403 Forbidden"]: 
+        if not self.is_genuine and len(self.title) > 8 and not self.title in ["Entry Point", "Login", "404 Not Found", "403 Forbidden"]:
             genuine_exists = select(d.is_genuine for d in Domain if d.is_genuine == True and self.title == d.title).first()
             if genuine_exists:
                 self.is_fake = True
@@ -179,19 +198,20 @@ class Domain(db.Entity):
         if banned.contains_banned(self.title) and not self.ban_exempt:
             self.is_banned = True
 
-        if is_elasticsearch_enabled():
-            dom = DomainDocType.from_obj(self)
-            dom.save()
+        #if is_elasticsearch_enabled():
+            #dom = DomainDocType.from_obj(self)
+            #dom.save()
 
     def after_update(self):
         invalidate_cache(self)
- 
+
 
     @db_session
     def to_dict(self, full=False):
         SITE_DOMAIN = os.environ['SITE_DOMAIN']
         d = dict()
-        d['url']        = self.index_url()
+        url = self.index_url()
+        d['url']        = url
         d['title']      = self.title
         d['is_up']      = self.is_up
         d['created_at'] = self.created_at
@@ -205,7 +225,7 @@ class Domain(db.Entity):
         d['powered_by'] = self.powered_by
         d['portscanned_at'] = self.portscanned_at
         d['description_json'] = self.description_json
-        
+
         d['useful_404_scanned_at'] = self.useful_404_scanned_at
         d['useful_404'] = None
         d['useful_404_dir'] = None
@@ -232,9 +252,11 @@ class Domain(db.Entity):
             our_clones  = self.clones()
 
             d['links_to']   = []
-            d['links_from'] = [] 
+            d['links_from'] = []
             d['emails']     = []
             d['interesting_paths'] = map(lambda p: self.construct_url(p), self.interesting_paths())
+            d['login_paths'] = map(lambda p: self.construct_url(p), self.login_paths())
+            d['captcha_paths'] = map(lambda p: self.construct_url(p), self.captcha_paths())
             d['bitcoin_addresses'] = []
             d['clones'] = map(lambda d: d.index_url(), our_clones)
             d['open_ports'] = self.get_open_ports()
@@ -293,9 +315,9 @@ class Domain(db.Entity):
             p=p.replace("day", "d")
             p=p.replace("weeks", "wk")
             p=p.replace("week", "wk")
-            p=p.replace("months", "mth") 
+            p=p.replace("months", "mth")
             p=p.replace("month", "mth")
-            return p 
+            return p
 
     def index_url(self):
         schema = "https" if self.ssl else  "http"
@@ -326,7 +348,7 @@ class Domain(db.Entity):
 
     @db_session
     def frontpage(self):
-        return select( p for p in tor_db.models.page.Page if p.domain==self and 
+        return select( p for p in tor_db.models.page.Page if p.domain==self and
                        p.is_frontpage == True and (p.code==200 or p.code==206) ).first()
 
     @classmethod
@@ -353,7 +375,7 @@ class Domain(db.Entity):
             fakes = select(d for d in Domain if d.is_genuine == False and d.title == title)
             for fake in fakes:
                 fake.is_fake = True
-        
+
         commit()
         return None
 
@@ -373,9 +395,9 @@ class Domain(db.Entity):
             lang = ''
         self.language = lang
         return lang
-            
 
-    
+
+
     @classmethod
     @db_session
     def find_stub(klass, host, port, ssl):

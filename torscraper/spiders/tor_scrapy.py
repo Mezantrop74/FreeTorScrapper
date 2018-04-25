@@ -1,5 +1,5 @@
 import scrapy
-import urlparse 
+import urlparse
 import re
 from collections import *
 from pony.orm import *
@@ -16,6 +16,15 @@ import bitcoin
 import email_util
 import interesting_paths
 import tor_text
+from bs4 import BeautifulSoup
+from captchaMiddleware.middleware import CaptchaMiddleware
+#test
+from elasticsearch_dsl import Q
+from elasticsearch_dsl import Search
+from elasticsearch_dsl import Nested
+from elasticsearch import Elasticsearch, helpers
+import sys, json
+
 
 SUBDOMAIN_PENALTY    = 6 * 60
 NORMAL_RAND_RANGE    = 2 * 60
@@ -143,8 +152,6 @@ class TorSpider(scrapy.Spider):
         'ypqmhx5z3q5o6beg.onion'
     ]
 
-    
-
     def __init__(self, *args, **kwargs):
         super(TorSpider, self).__init__(*args, **kwargs)
         if hasattr(self, "passed_url"):
@@ -163,23 +170,23 @@ class TorSpider(scrapy.Spider):
                     self.start_urls = domain_urls_next_scheduled()
         else:
             self.start_urls = domain_urls_recent_no_crap()
-        
+
 
 
 
 
     @db_session
-    def update_page_info(self, url, title, code, is_frontpage=False, size=0):
-        
+    def update_page_info(self, url, title, code, contains_login, contains_captcha, is_frontpage=False, size=0):
+
         if not Domain.is_onion_url(url):
             return False
-        
+
         if title == "ERROR: The requested URL could not be retrieved":
             return False
 
         failed_codes = [666, 503, 504, 502]
         responded_codes = [200, 206,403, 500, 401, 301, 302, 304, 400]
-        if (hasattr(self, "only_success") and self.only_success == "yes" and 
+        if (hasattr(self, "only_success") and self.only_success == "yes" and
             code not in responded_codes):
             return False
 
@@ -199,9 +206,9 @@ class TorSpider(scrapy.Spider):
                 port = 443
             else:
                 port = 80
-            
+
         now = datetime.now()
-      
+
         domain = Domain.get(host=host, port=port, ssl=ssl)
         is_crap = False
         if not domain:
@@ -210,7 +217,7 @@ class TorSpider(scrapy.Spider):
             else:
                 last_alive = NEVER
                 title=''
-            domain=Domain(host=host, port=port, ssl=ssl, is_up=is_up, last_alive=last_alive, 
+            domain=Domain(host=host, port=port, ssl=ssl, is_up=is_up, last_alive=last_alive,
                 created_at=now, next_scheduled_check=(now + timedelta(hours=1)), visited_at=now, title=title)
             self.log("created domain %s" % host)
         else:
@@ -229,7 +236,8 @@ class TorSpider(scrapy.Spider):
 
         page = Page.get(url=url)
         if not page:
-            page = Page(url=url, title=title, code=code, created_at=now, visited_at=now, domain=domain, is_frontpage=is_frontpage, size=size)
+            page = Page(url=url, title=title, code=code, created_at=now, visited_at=now,domain=domain,
+                        contains_login=contains_login, contains_captcha=contains_captcha, is_frontpage=is_frontpage, size=size)
         else:
             if is_up:
                 page.title = title
@@ -238,10 +246,12 @@ class TorSpider(scrapy.Spider):
             page.size = size
             if not page.is_frontpage and is_frontpage:
                 page.is_frontpage = is_frontpage
-       
+            page.contains_login = contains_login
+            page.contains_captcha = contains_captcha
+
         return page
 
-    
+
     @timeout_decorator.timeout(5)
     @db_session
     def extract_other(self, page, body):
@@ -301,9 +311,132 @@ class TorSpider(scrapy.Spider):
                 domain.useful_404_dir = False
             else:
                 domain.useful_404     = False
-    
+
         domain.useful_404_scanned_at = datetime.now()
         return None
+
+    def get_login_forms(self, content, url):
+        soup = BeautifulSoup(content, 'html.parser')
+
+        input_passwords = soup.find_all("input", type="password")
+        forms = soup.find_all("form")
+
+        logins_forms = []
+
+        if len(forms) == 0 or len(input_passwords) == 0:
+            return logins_forms
+
+        for form in forms:
+            for input_password in input_passwords:
+                if input_password in form.descendants:
+                    logins_form = {}
+
+
+                    try:
+                        logins_form["url"] = url.encode('ascii', 'ignore')
+                    except Exception as e:
+                        logins_form["url"] =""
+
+                    try:
+                        logins_form["form_name"] = form.get('name').encode('ascii', 'ignore')
+                    except Exception as e:
+                        logins_form["form_name"] = ""
+
+                    try:
+                        logins_form["form_action"] = form.get('action').encode('ascii', 'ignore')
+                    except Exception as e:
+                        logins_form["form_action"] = ""
+
+                    form_inputs = form.find_all("input")
+                    inputs = {}
+                    for i in range(len(form_inputs)):
+                        attributes_input = {}
+
+                        try:
+                            attributes_input["id"] = form_inputs[i].get('id').encode('ascii', 'ignore')
+                        except Exception as e:
+                            attributes_input["id"] = ""
+                        try:
+                            attributes_input["name"] = form_inputs[i].get('name').encode('ascii', 'ignore')
+                        except Exception as e:
+                            attributes_input["name"] = ""
+                        try:
+                            attributes_input["type"] = form_inputs[i].get('type').encode('ascii', 'ignore')
+                        except Exception as e:
+                            attributes_input["type"] = ""
+                        try:
+                            attributes_input["value"] = form_inputs[i].get('value').encode('ascii', 'ignore')
+                        except Exception as e:
+                            attributes_input["value"] = ""
+
+                        inputs["input" + str(i)] = attributes_input
+                    logins_form["inputs"] = inputs
+                    logins_forms.append(logins_form)
+        return logins_forms
+
+
+
+    def is_contains_login(self, content, url):
+        soup = BeautifulSoup(content, 'html.parser')
+
+        input_passwords = soup.find_all("input", type="password")
+        forms = soup.find_all("form")
+
+        if len(forms) == 0 or len(input_passwords) == 0:
+            return False
+
+        possibleLogins = []
+        for form in forms:
+            for input_password in input_passwords:
+                if input_password in form.descendants:
+                    possibleLogins.append(input_password)
+
+        '''
+        path = 'test_login_form.txt'
+
+        login_forms_file = open(path,'a+')
+        existant_login_forms = login_forms_file.readlines()
+        print("***********************************************************************************************************************************************")
+        print(existant_login_forms)
+        print(contains_input_passwords)
+
+        if len(contains_input_passwords) == 0:
+            return False
+        elif len(existant_login_forms) > 0:
+            for existant_login_form in existant_login_forms:
+                for contains_input_password in contains_input_passwords:
+                    existant_login_form = existant_login_form.replace("\n", "")
+                    if str(contains_input_password) in existant_login_form:
+                        print("Already exist: " + str(contains_input_password) + " -- " + str(existant_login_form))
+                        print("***********************************************************************************************************************************************")
+                        login_forms_file.close()
+                        return False
+                    else:
+                        login_forms_file.write(str(contains_input_password))
+                        print("Add it: " + str(contains_input_password) + " -- " + str(existant_login_form))
+                        print("***********************************************************************************************************************************************")
+                        login_forms_file.close()
+                        return True
+        else:
+            for contains_input_password in contains_input_passwords:
+                login_forms_file.write(str(contains_input_password))
+                print("Add it: " + str(contains_input_password) + " -- " + str(existant_login_forms))
+                print("***********************************************************************************************************************************************")
+            login_forms_file.close()
+            return True
+
+
+        #days_file = open(path,'a')
+        #days_file.write("This is a nice form ")
+        #days_file.close()
+        '''
+        if len(possibleLogins) == 0:
+            return False
+        return True
+
+    def is_contains_captcha(self, response):
+        sampleMiddleware = CaptchaMiddleware();
+        return  sampleMiddleware.process_response(response.request, response, scrapy.Spider)
 
     @db_session
     def parse(self, response, recent_alive_check=False):
@@ -315,12 +448,15 @@ class TorSpider(scrapy.Spider):
             pass
         parsed_url = urlparse.urlparse(response.url)
         host  = parsed_url.hostname
-        if host != "zlal32teyptf4tvi.onion":  
+        if host != "zlal32teyptf4tvi.onion":
             self.log('Got %s (%s)' % (response.url, title))
             is_frontpage = Page.is_frontpage_request(response.request)
             size = len(response.body)
-            
-            page = self.update_page_info(response.url, title, response.status, is_frontpage, size)
+
+            contains_login = self.is_contains_login(response.body, response.url)#Detect if there's a login form on the page
+            contains_captcha = self.is_contains_captcha(response)#Detect if there's a captcha image on the page
+
+            page = self.update_page_info(response.url, title, response.status, contains_login, contains_captcha , is_frontpage, size)
             if not page:
                 return
 
@@ -334,8 +470,6 @@ class TorSpider(scrapy.Spider):
             if got_server_response and response.headers.get("Powered-By"):
                 page.domain.powered_by = tor_text.utf8_conv(response.headers.get("Powered-By"))
             domain = page.domain
-            
-            # don't check subdomains that often
 
             penalty = 0
             rng = NORMAL_RAND_RANGE
@@ -346,7 +480,7 @@ class TorSpider(scrapy.Spider):
             if domain.is_up:
                 domain.dead_in_a_row = 0
 
-                domain.next_scheduled_check = datetime.now() + timedelta(minutes = penalty + random.randint(60, 60 + rng)) 
+                domain.next_scheduled_check = datetime.now() + timedelta(minutes = penalty + random.randint(60, 60 + rng))
             else:
                 yield_later = None
                 # check newly dead domains immediately
@@ -359,7 +493,7 @@ class TorSpider(scrapy.Spider):
                     domain.dead_in_a_row += 1
                     if domain.dead_in_a_row > MAX_DEAD_IN_A_ROW:
                         domain.dead_in_a_row = MAX_DEAD_IN_A_ROW
-                    domain.next_scheduled_check = (datetime.now() + 
+                    domain.next_scheduled_check = (datetime.now() +
                         timedelta(minutes = penalty + random.randint(60, 60 + rng) * (PENALTY_BASE ** domain.dead_in_a_row)))
 
                 commit()
@@ -367,17 +501,16 @@ class TorSpider(scrapy.Spider):
                     yield yield_later
 
             is_text = False
-            content_type = response.headers.get("Content-Type") 
+            content_type = response.headers.get("Content-Type")
             if got_server_response and content_type and re.match('^text/', content_type.strip()):
                 is_text = True
 
-            # elasticsearch
+            # elasticsearch Pages
 
             if is_elasticsearch_enabled() and is_text:
                 self.log('Inserting %s page into elasticsearch' % response.url)
                 pg = PageDocType.from_obj(page, response.body)
                 pg.save()
-
             commit()
 
             # add some randomness to the check
@@ -408,7 +541,7 @@ class TorSpider(scrapy.Spider):
             # 404 detections
 
             if domain.is_up and is_frontpage and domain.useful_404_scanned_at < (datetime.now() - timedelta(weeks=2)):
-                
+
                 # standard
 
                 r = ''.join(random.choice(string.ascii_lowercase) for _ in range(random.randint(7,12)))
@@ -420,13 +553,13 @@ class TorSpider(scrapy.Spider):
                 r = ''.join(random.choice(string.ascii_lowercase) for _ in range(random.randint(7,12)))
                 url = domain.index_url() + r +".php"
                 yield scrapy.Request(url, callback=self.useful_404_detection)
-               
+
                 # dir
 
                 r = ''.join(random.choice(string.ascii_lowercase) for _ in range(random.randint(7,12)))
                 url = domain.index_url() + r +"/"
                 yield scrapy.Request(url, callback=self.useful_404_detection)
-            
+
             link_to_list = []
             self.log("Finding links...")
 
@@ -444,7 +577,7 @@ class TorSpider(scrapy.Spider):
                             link_to_list.append(fullurl)
 
                 self.log("link_to_list %s" % link_to_list)
-                    
+
                 if page.got_server_response():
                     small_body = response.body[:(1024*MAX_PARSE_SIZE_KB)]
                     page.links_to.clear()
@@ -457,9 +590,149 @@ class TorSpider(scrapy.Spider):
                     except timeout_decorator.TimeoutError:
                         pass
 
-                    commit()                        
+                    commit()
+
+            #Elasticsearch Domains
+            if is_elasticsearch_enabled() and is_text:
+
+                print("***********************************************************************************************************************************************")
+
+                domain_query = Search().filter(Q("term", _id=host))
+                result = domain_query.execute()
+                login_forms = self.get_login_forms(response.body, response.url)
+                host = host.encode('ascii', 'ignore')
+
+                forms = []
+                update_values = False
+                try:
+                    login_forms_ES = result[0]["login_form"]
+
+                    if len(login_forms) != 0:
+                        if len(login_forms_ES) == 0:
+                            print("avant")
+                            forms = login_forms
+                            print("milieu")
+                            self.update_domain_elasticsearch(host, result, forms)
+                            print("apres")
+                        else:
+                            for login_form in login_forms:
+                                for login_form_ES in login_forms_ES:
+                                    similarity = self.get_similarity(login_form, login_form_ES)
+                                    print(login_form)
+                                    print(similarity)
+                                    #login_form_ES = self.unicode_dictionary_to_ascii(result[0]["login_form"])
+
+                                    print("ici5")
+
+                                    if similarity <= 5:
+                                        print("ici 5.5.5")
+                                        if not login_form in forms:
+                                            update_values = True
+                                            forms.append(login_form)
+                                            print("ici5.5")
+                                            print(forms)
+
+                                        print("ici6")
+                    if update_values:
+                        login_form_ES = self.unicode_dictionary_to_ascii(result[0]["login_form"])
+                        for form in login_form_ES:
+                            forms.append(form)
+                        print("-------------------------------------------------------------------------------------------------------- UPDATE --------------------------------------------------------------------------------------------------------")
+                        print(forms)
+                        self.update_domain_elasticsearch(host, result, forms)
+                        print("-------------------------------------------------------------------------------------------------------- UPDATE --------------------------------------------------------------------------------------------------------")
+                    #forms = []
+                    #self.update_domain_elasticsearch(host, result, forms)
+                except Exception as e:
+                    print("ERROR: " + str(e))
+                    print("NOT EXIST !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                    print(not "login_form" in dir(result[0]))
+                    print(login_forms)
+                    print(len(login_forms))
+                    if len(login_forms) != 0 and not "login_form" in dir(result[0]):
+                        for login_form in login_forms:
+                            if not login_form in forms:
+                                forms.append(login_form)
+                                print("ici Exception")
+                                print(forms)
+                        print("-------------------------------------------------------------------------------------------------------- UPDATE --------------------------------------------------------------------------------------------------------")
+                        print(forms)
+                        self.update_domain_elasticsearch(host, result, forms)
+                        print("-------------------------------------------------------------------------------------------------------- UPDATE --------------------------------------------------------------------------------------------------------")
+                print("***********************************************************************************************************************************************")
+
+    def update_domain_elasticsearch(self, host, result, forms):
+        domain = [{
+                  "_index": "hiddenservices",
+                  "_type": "domain",
+                  "_id": host,
+                  "_source": {
+                    "is_genuine": result[0]["is_genuine"],
+                    "is_crap": result[0]["is_crap"],
+                    "title": result[0]["title"].encode('ascii', 'ignore'),
+                    "created_at": result[0]["created_at"],
+                    "is_fake": result[0]["is_fake"],
+                    "ssl": result[0]["ssl"],
+                    "visited_at": result[0]["visited_at"],
+                    "url": "http://" + host.encode('ascii', 'ignore') + "/",
+                    "is_subdomain": result[0]["is_subdomain"],
+                    "is_banned": result[0]["is_banned"],
+                    "port": result[0]["port"],
+                    "is_up": result[0]["is_up"],
+                    "login_form": forms
+                  }
+                }]
+
+        es = Elasticsearch()
+        helpers.bulk(es, domain)
+
+
+    def get_similarity(self, login_form, login_form_ES):
+        similarity = 0
+        for attribute in login_form_ES:
+            if attribute == "inputs":
+                for inputs in login_form_ES[attribute]:
+                    for input_values in login_form_ES[attribute][inputs]:
+                        try:
+                            value_ES = login_form_ES[attribute][inputs][input_values]
+                            new_value = login_form[attribute][inputs][input_values]
+
+                            if value_ES == new_value and (value_ES != "" or new_value != ""):
+                                similarity += 1
+                        except Exception as e:
+                            pass
+
+            if login_form_ES[attribute] == login_form[attribute]:
+                similarity += 1
+
+        return similarity
+
+    def unicode_dictionary_to_ascii(self, login_forms_ES):
+        ascii_dictionnary = []
+
+        for login_form_ES in login_forms_ES:
+            logins_form = {}
+
+            for attribute in login_form_ES:
+                if attribute == "inputs":
+                    inputs_list = {}
+
+                    for inputs in login_form_ES[attribute]:
+                        attributes_input ={}
+
+                        for input_values in login_form_ES[attribute][inputs]:
+                            attributes_input[input_values.encode('ascii', 'ignore')] = login_form_ES[attribute][inputs][input_values].encode('ascii', 'ignore')
+
+                        inputs_list[inputs.encode('ascii', 'ignore')] = attributes_input
+                    logins_form["inputs"] = inputs_list
+
+                else:
+                    logins_form[attribute.encode('ascii', 'ignore')] = login_form_ES[attribute].encode('ascii', 'ignore')
+
+            ascii_dictionnary.append(logins_form)
+            return ascii_dictionnary
+
 
 
     def process_exception(self, response, exception, spider):
         self.update_page_info(response.url, None, 666);
-

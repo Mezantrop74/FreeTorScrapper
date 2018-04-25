@@ -11,6 +11,13 @@ import re
 import tor_text
 import logging
 
+
+#test
+from elasticsearch_dsl import Q
+from elasticsearch_dsl import Search
+from elasticsearch_dsl import Nested
+import json
+
 NEVER = datetime.fromtimestamp(0)
 
 try:
@@ -93,19 +100,19 @@ def is_elasticsearch_enabled():
     return ('ELASTICSEARCH_ENABLED' in os.environ and os.environ['ELASTICSEARCH_ENABLED'].lower()=='true')
 
 class DomainDocType(DocType):
-    title = Text(analyzer="snowball")
-    created_at = Date()
-    visited_at = Date()
-    last_alive = Date()
-    is_up      = Boolean()
-    is_fake    = Boolean()
-    is_genuine = Boolean()
-    is_crap    = Boolean()
-    is_banned  = Boolean()
-    url        = Text()
+    title        = Text(analyzer="snowball")
+    created_at   = Date()
+    visited_at   = Date()
+    last_alive   = Date()
+    is_up        = Boolean()
+    is_fake      = Boolean()
+    is_genuine   = Boolean()
+    is_crap      = Boolean()
+    is_banned    = Boolean()
+    url          = Text()
     is_subdomain = Boolean()
-    ssl        = Boolean()
-    port       = Integer()
+    ssl          = Boolean()
+    port         = Integer()
 
     class Meta:
         name = 'domain'
@@ -117,6 +124,19 @@ class DomainDocType(DocType):
 
     @classmethod
     def from_obj(klass, obj):
+        domain_query = Search().filter(Q("term", _id=obj.host))
+        result = domain_query.execute()
+
+        forms = [ ]
+        try:
+            print("login_form" in dir(result[0]))
+            if result[0]["login_form"]:
+                forms = result[0]["login_form"]
+                print("exist")
+        except Exception as e:
+            print("no exist")
+
+
         return klass(
             meta={'id': obj.host},
             title=obj.title,
@@ -130,7 +150,8 @@ class DomainDocType(DocType):
             url=obj.index_url(),
             is_subdomain=obj.is_subdomain,
             ssl=obj.ssl,
-            port=obj.port
+            port=obj.port,
+            login_form = forms
         )
 
     @classmethod
@@ -140,7 +161,7 @@ class DomainDocType(DocType):
 
 
 class PageDocType(DocType):
-    html_strip = analyzer('html_strip', 
+    html_strip = analyzer('html_strip',
         tokenizer="standard",
         filter=["standard", "lowercase", "stop", "snowball", "asciifolding"],
         char_filter=["html_strip"]
@@ -155,7 +176,8 @@ class PageDocType(DocType):
     body_stripped = Text(analyzer=html_strip, term_vector="with_positions_offsets")
     is_frontpage  = Boolean()
     nid           = Integer()
-
+    contains_login = Boolean()
+    contains_captcha = Boolean()
 
     class Meta:
         name = 'page'
@@ -173,6 +195,8 @@ class PageDocType(DocType):
             title=obj.title,
             created_at=obj.created_at,
             visited_at=obj.visited_at,
+            contains_login=obj.contains_login,
+            contains_captcha=obj.contains_captcha,
             is_frontpage=obj.is_frontpage,
             code=obj.code,
             domain_id=obj.domain.id,
