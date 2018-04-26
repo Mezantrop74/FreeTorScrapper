@@ -21,6 +21,8 @@ class Page(db.Entity):
     links_from   = Set("Page", reverse="links_to",   table="page_link", column="link_from");
     emails       = Set('Email', reverse="pages", column="email", table="email_link")
     bitcoin_addresses = Set('BitcoinAddress', reverse="pages", column="bitcoin_address", table="bitcoin_address_link")
+    contains_login = Required(int, default=0)
+    contains_captcha = Required(int, default=0)
 
     @classmethod
     @db_session

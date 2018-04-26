@@ -169,6 +169,47 @@ No interesting paths in database.
 
 </div>
 
+<div id="login">
+<h3>Login Paths:</h3>
+{% if len(logins)==0 %}
+No login paths in database.
+{% else %}
+<ul>
+{% for login in logins %}
+<li>
+<a href="{{domain.construct_url(login)}}">{{login}}</a>
+{% set other_logins = count_paths(login) %}
+{% if other_logins>1 %}
+(found {{other_logins-1}} other places <a href="{{url_for('path_list',path=login[1:])}}">[VIEW]</a>)
+{% endif %}
+</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+</div>
+
+<div id="captcha">
+
+<h3>Captcha Paths:</h3>
+{% if len(captchas)==0 %}
+No captcha paths in database.
+{% else %}
+<ul>
+{% for captcha in captchas %}
+<li>
+<a href="{{domain.construct_url(captcha)}}">{{captcha}}</a>
+{% set other_captchas = count_paths(captcha) %}
+{% if other_captchas>1 %}
+(found {{other_captchas-1}} other places <a href="{{url_for('path_list',path=captcha[1:])}}">[VIEW]</a>)
+{% endif %}
+</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+</div>
+
 <div id="emails">
 <h3>Emails:</h3>
 {% if len(emails)==0 %}

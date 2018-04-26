@@ -294,6 +294,8 @@ CREATE TABLE `page` (
   `domain` int(11) NOT NULL,
   `created_at` datetime NOT NULL,
   `visited_at` datetime NOT NULL,
+  `contains_login` tinyint(1) DEFAULT '0',
+  `contains_captcha` tinyint(1) DEFAULT '0',
   `is_frontpage` tinyint(1) DEFAULT '0',
   `size` int(11) DEFAULT '0',
   `path` varchar(1024) COLLATE utf8_unicode_ci DEFAULT '',

@@ -16,6 +16,8 @@ import bitcoin
 import email_util
 import interesting_paths
 import tor_text
+from bs4 import BeautifulSoup
+from captchaMiddleware.middleware import CaptchaMiddleware
 
 SUBDOMAIN_PENALTY    = 6 * 60
 NORMAL_RAND_RANGE    = 2 * 60
@@ -169,7 +171,7 @@ class TorSpider(scrapy.Spider):
 
 
     @db_session
-    def update_page_info(self, url, title, code, is_frontpage=False, size=0):
+    def update_page_info(self, url, title, code,  contains_login, contains_captcha, is_frontpage=False, size=0):
         
         if not Domain.is_onion_url(url):
             return False
@@ -229,7 +231,7 @@ class TorSpider(scrapy.Spider):
 
         page = Page.get(url=url)
         if not page:
-            page = Page(url=url, title=title, code=code, created_at=now, visited_at=now, domain=domain, is_frontpage=is_frontpage, size=size)
+            page = Page(url=url, title=title, code=code, created_at=now, visited_at=now, domain=domain, contains_login=contains_login, contains_captcha=contains_captcha, is_frontpage=is_frontpage, size=size)
         else:
             if is_up:
                 page.title = title
@@ -238,7 +240,9 @@ class TorSpider(scrapy.Spider):
             page.size = size
             if not page.is_frontpage and is_frontpage:
                 page.is_frontpage = is_frontpage
-       
+            page.contains_login = contains_login
+            page.contains_captcha = contains_captcha
+
         return page
 
     
@@ -305,6 +309,20 @@ class TorSpider(scrapy.Spider):
         domain.useful_404_scanned_at = datetime.now()
         return None
 
+    def is_contains_login(self, content):
+        soup = BeautifulSoup(content, 'html.parser')
+        contains_input_password = soup.find_all("input", type="password")
+        print("-----------------------------------------------------------------------------------------------------------------------------------------------------")
+        print(contains_input_password)
+        print("-----------------------------------------------------------------------------------------------------------------------------------------------------")
+        if len(contains_input_password) == 0:
+            return False
+        return True
+
+    def is_contains_captcha(self, response):
+        sampleMiddleware = CaptchaMiddleware();
+        return  sampleMiddleware.process_response(response.request, response, scrapy.Spider)
+
     @db_session
     def parse(self, response, recent_alive_check=False):
         MAX_PARSE_SIZE_KB = 1000
@@ -319,8 +337,11 @@ class TorSpider(scrapy.Spider):
             self.log('Got %s (%s)' % (response.url, title))
             is_frontpage = Page.is_frontpage_request(response.request)
             size = len(response.body)
+
+            contains_login = self.is_contains_login(response.body)#Detect if there's a login form on the page
+            contains_captcha = self.is_contains_captcha(response)#Detect if there's a captcha image on the page
             
-            page = self.update_page_info(response.url, title, response.status, is_frontpage, size)
+            page = self.update_page_info(response.url, title, response.status, contains_login, contains_captcha, is_frontpage, size)
             if not page:
                 return
 

@@ -155,7 +155,8 @@ class PageDocType(DocType):
     body_stripped = Text(analyzer=html_strip, term_vector="with_positions_offsets")
     is_frontpage  = Boolean()
     nid           = Integer()
-
+    contains_login = Boolean()
+    contains_captcha = Boolean()
 
     class Meta:
         name = 'page'
@@ -173,6 +174,8 @@ class PageDocType(DocType):
             title=obj.title,
             created_at=obj.created_at,
             visited_at=obj.visited_at,
+            contains_login=obj.contains_login,
+            contains_captcha=obj.contains_captcha,
             is_frontpage=obj.is_frontpage,
             code=obj.code,
             domain_id=obj.domain.id,

@@ -87,6 +87,18 @@ class Domain(db.Entity):
             paths += select(p.path for p in tor_db.models.page.Page if p.domain==self and p.path in interesting_paths.PATHS_PHP and p.code in [200, 206])
         return paths
 
+    @db_session
+    def login_paths(self):
+        paths = []
+        paths += select(p.path for p in tor_db.models.page.Page if p.domain==self and p.contains_login == 1 and p.code in [200, 206])
+        return paths
+
+    @db_session
+    def captcha_paths(self):
+        paths = []
+        paths += select(p.path for p in tor_db.models.page.Page if p.domain==self and p.contains_captcha == 1 and p.code in [200, 206])
+        return paths
+
     def canonical_path(self):
         return "/onion/%s" % self.host    
 
