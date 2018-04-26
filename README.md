@@ -33,7 +33,7 @@ From the GNU site:
 * tor
 
 ## Warning
-The version of Elasticsearch needs to be less than 6.x. The maximum is 5.6.6 in the 5.x version. If you go higher of 5.x you will have problems. Also, if you decide to install Kibana or any extra functionalities link to Elasticsearch, install them with the same version because will not work.
+This software requires an Elasticsearch version in the 5.x series. As of this writing, the latest is 5.6.6. 6.x is known to be problematic. Also, if you decide to install Kibana or any extra functionalities linked to Elasticsearch, install them with the same version otherwise it won't work.
 
 Do not start too many instances of scraper/crawler because, with only 4 instances of tor proxy, it will be hard to connect to the onion site. If you create more than 3-4 instances, it could become really slow. In this situation,  the crawler will become so slow that they will not be able to crawl pages. So you will not progress with this method. Let the crawler run and you will create a bigger list of valid domains with information in it.
 
