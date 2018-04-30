@@ -33,7 +33,7 @@ From the GNU site:
 * tor
 
 ## Warning
-The version of Elasticsearch needs to be less than 6.x. The maximum is 5.6.6 in the 5.x version. If you go higher of 5.x you will have problems. Also, if you decide to install Kibana or any extra functionalities link to Elasticsearch, install them with the same version because will not work.
+This software requires an Elasticsearch version in the 5.x series. As of this writing, the latest is 5.6.6. 6.x is known to be problematic. Also, if you decide to install Kibana or any extra functionalities linked to Elasticsearch, install them with the same version otherwise it won't work.
 
 Do not start too many instances of scraper/crawler because, with only 4 instances of tor proxy, it will be hard to connect to the onion site. If you create more than 3-4 instances, it could become really slow. In this situation,  the crawler will become so slow that they will not be able to crawl pages. So you will not progress with this method. Let the crawler run and you will create a bigger list of valid domains with information in it.
 
@@ -46,34 +46,9 @@ After booting, be sure that the link between Tor and Privoxy are working. To tes
     
 If it didn't work, fix the problem before crawling because all your onions will convert to a "dead" status. You can try to run the script:`start.sh` to reinitialize the links.
 
-### Tor browser Linux (Complementary)
-To test websites before crawling (install this to have an interface and a better visualization) Important!! Tor browser needs an interface... Don't install this on a console.
-
-* download https://www.torproject.org/download/download-easy.html.en
-* extract the folder on your desktop.
-* edit tor-browser_en-US/start-tor-browser .
-
-
-Change this:
-  
-    if [ "`id -u`" -eq 0 ]; then
-        complain "The Tor Browser Bundle should not be run as root.  Exiting."
-        exit 1
-    fi  
-    
-
-To:
-
-    if [ "`id -u`" -eq 1 ]; then
-      complain "The Tor Browser Bundle should not be run as root.  Exiting."
-      exit 1
-    fi
-
-* click on Tor Browser file and click on connect.
-
 ### Tor service
 To use the new version of tor, you should follow these steps: https://www.torproject.org/docs/debian.html.en
-By using the last version of tor, you will be able to crawler the new generation of onions (V3).
+By using the last version of tor, you will be able to crawl the new generation of onions (V3).
 
 If you used a version older than 0.3.x, you can have a problem with the update to 0.3.x. I was missing two libraries: 
  
@@ -83,9 +58,11 @@ If you used a version older than 0.3.x, you can have a problem with the update t
 So, I installed them:
 
         sudo apt-get install libzstd1
+
 To install libssl1.1, I used a Debian package: https://packages.ubuntu.com/bionic/libssl1.1
 
         lynx  https://packages.ubuntu.com/bionic/libssl1.1
+
 Use the bottom arrow to go at the bottom of the page and select your "Architecture Package Size". When you had made your choice, click on the right arrow, it will redirect you to the download page. Now it's the same thing. Use the bottom arrow to go down and choose the one that you want. When you find the one, just click on the right arrow. At the bottom of your interface, you will see `D) Download or C) Cancel`. Press `D`. When you will see the text `Save to disk`, go on it. Press the right arrow and press on `Enter`. When it's done click on `q` and `y` to quit.
 
         dpkg -i libssl1.1_1.1.0g-2ubuntu2_amd64.deb #the name of your debain package
@@ -121,7 +98,7 @@ then activate it.
     # Run the next command when you're in your virtual environment because if you aren't, it will install in your normal environment
     pip install -r requirements.txt
 ### Install MariaDB
-*** Mysql have a problem with some syntax in the code so I recommend you to install MariaDB ***
+*** Mysql has problems with some syntax in the code so I recommend you to install MariaDB ***
 
     sudo apt-get install mariadb-server
     sudo apt-get install mariadb-client
@@ -171,8 +148,8 @@ Edit `etc/proxy` for your TOR setup
     cd /etc/privoxy/
     cp default.action default.action.orig
     cp default.filter default.filter.orig
-    touch default.action (let file empty)
-    touch default.filter (let file empty)
+    touch default.action (leave the file empty)
+    touch default.filter (leave the file empty)
 
 ### Start your services
 
@@ -195,7 +172,7 @@ Now you can test if it works with the new generation of onions (V3) (test all po
     curl --socks5-hostname 127.0.0.1:9051 http://jamie3vkiwibfiwucd6vxijskbhpjdyajmzeor4mc4i7yopvpo4p7cyd.onion/
     curl --proxy 127.0.0.1:3129 http://jamie3vkiwibfiwucd6vxijskbhpjdyajmzeor4mc4i7yopvpo4p7cyd.onion/
 
-If you get something likes to Privoxy localhost port forwarding don't continue, it will not work.
+If you get something like "Privoxy localhost port forwarding" don't continue, it will not work.
 
     ./push.sh someoniondirectory.onion
 
@@ -275,14 +252,10 @@ After restart :
 
 ## Infrastructure
 
-Fresh Onions runs on two servers, a frontend host running the database and hidden service website, and a backend host running the crawler. Probably most interesting to the reader is the setup for the backend. T
-OR as a client is COMPLETELY SINGLETHREADED. I know! It's 2017, and along with a complete lack of flying cars, TOR runs in a single thread. What this means is that if you try to run a crawler on a single TOR instance you will quickly find you are maxing out your CPU at 100%.
+Fresh Onions runs on two servers, a frontend host running the database and hidden service website, and a backend host running the crawler. Probably most interesting to the reader is the setup for the backend. TOR as a client is COMPLETELY SINGLETHREADED. I know! It's 2017, and along with a complete lack of flying cars, TOR runs in a single thread. What this means is that if you try to run a crawler on a single TOR instance you will quickly find you are maxing out your CPU at 100%.
 
 The solution to this problem is running multiple TOR instances and connecting to them through some kind of frontend that will round-robin your requests. The Fresh Onions crawler runs eight Tor instances.
 
-Debian (and Ubuntu) comes with a useful program "tor-instance-create" for quickly creating multiple instances of TOR. I used Squid as my frontend proxy, but unfortunately, it can't connect to SOCKS directly, so I
- used "Privoxy" as an intermediate proxy. You will need one Privoxy instance for every TOR instance. There is a script in "scripts/create_privoxy.sh" to help with creating Privoxy instances on Debian systems. It also helps to replace /etc/privoxy/default.filter with an empty file, to reduce CPU load by removing unnecessary regexes.
+Debian (and Ubuntu) comes with a useful program "tor-instance-create" for quickly creating multiple instances of TOR. I used Squid as my frontend proxy, but unfortunately, it can't connect to SOCKS directly, so I used "Privoxy" as an intermediate proxy. You will need one Privoxy instance for every TOR instance. There is a script in "scripts/create_privoxy.sh" to help with creating Privoxy instances on Debian systems. It also helps to replace /etc/privoxy/default.filter with an empty file, to reduce CPU load by removing unnecessary regexes.
 
-Additionally, this resource https://www.howtoforge.com/ultimate-security-proxy-with-tor might be useful in setting up squid. If all you are doing is crawling and don't care about anonymity, I also recommend running TOR in tor2web mode (required recompilation) for increased speed
-
-
+Additionally, this resource https://www.howtoforge.com/ultimate-security-proxy-with-tor might be useful in setting up squid. If all you are doing is crawling and don't care about anonymity, I also recommend running TOR in tor2web mode (required recompilation) for increased speed.
