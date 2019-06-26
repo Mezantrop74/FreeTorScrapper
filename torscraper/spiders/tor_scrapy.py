@@ -20,7 +20,7 @@ import tor_text
 SUBDOMAIN_PENALTY    = 6 * 60
 NORMAL_RAND_RANGE    = 2 * 60
 SUBDOMAIN_RAND_RANGE = 6 * 60
-MAX_DEAD_IN_A_ROW    = 17
+MAX_DEAD_IN_A_ROW    = 30
 PENALTY_BASE         = 1.5
 
 from scrapy.exceptions import IgnoreRequest
@@ -117,13 +117,13 @@ class TorSpider(scrapy.Spider):
         ],
         'INJECT_RANGE_HEADER': True,
         'ROBOTSTXT_OBEY': False,
-	    'CONCURRENT_REQUESTS' : 32,
-        'REACTOR_THREADPOOL_MAXSIZE' : 32,
+	    'CONCURRENT_REQUESTS' : 24,
+        'REACTOR_THREADPOOL_MAXSIZE' : 24,
         'CONCURRENT_REQUESTS_PER_DOMAIN' : 4,
         'DEPTH_PRIORITY' : 8,
         'DOWNLOAD_TIMEOUT': 90,
         'RETRY_TIMES': 1,
-        'MAX_PAGES_PER_DOMAIN' : 1000,
+        'MAX_PAGES_PER_DOMAIN' : 1500,
         'HTTPERROR_ALLOWED_CODES': handle_httpstatus_list,
         'RETRY_HTTP_CODES': [],
         'DOWNLOADER_MIDDLEWARES' : {

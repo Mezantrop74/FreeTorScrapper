@@ -1,60 +1,36 @@
 import random
 from datetime import *
+
 from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.internet.protocol import Protocol, ClientFactory
 from twisted.internet.task import react
-
 from txsocksx.client import SOCKS5ClientEndpoint
+from twisted.internet import reactor
+
+from portscanner_utils import PORTS
 from tor_db import *
 
-from twisted.internet import reactor
-TOR_HOST = os.environ['HIDDEN_SERVICE_PROXY_HOST']
-TOR_PORT = int(os.environ['HIDDEN_SERVICE_PROXY_PORT'])
+#           |----------------- HOST -----------------|-------------------- PORT --------------------|
+#Tor 1
+TOR_HOST  = [os.environ['HIDDEN_SERVICE_PROXY_HOST'], int(os.environ['HIDDEN_SERVICE_PROXY_PORT'])]
+#Tor 2
+TOR_HOST2 = [os.environ['HIDDEN_SERVICE_PROXY_HOST2'], int(os.environ['HIDDEN_SERVICE_PROXY_PORT2'])]
+#Tor 3
+TOR_HOST3 = [os.environ['HIDDEN_SERVICE_PROXY_HOST3'], int(os.environ['HIDDEN_SERVICE_PROXY_PORT3'])]
+#Tor 4
+TOR_HOST4 = [os.environ['HIDDEN_SERVICE_PROXY_HOST4'], int(os.environ['HIDDEN_SERVICE_PROXY_PORT4'])]
+
+TOR_HOSTS = [TOR_HOST, TOR_HOST2, TOR_HOST3, TOR_HOST4]
+
 MAX_TOTAL_CONNECTIONS = 16
 MAX_CONNECTIONS_PER_HOST = 1
-
-PORTS = { 8333  : "bitcoin", 
-          9051  : "bitcoin-control",
-          9333  : "litecoin", 
-          22556 : "dogecoin",
-          6697  : "irc",
-          6667  : "irc",
-          143   : "imap",
-          110   : "pop3",
-          119   : "nntp",
-          22    : "ssh",
-          2222  : "ssh?",
-          23    : "telnet",
-          25    : "smtp",
-          80    : "http",
-          443   : "https",
-          21    : "ftp",
-          5900  : "vnc",
-          27017 : "mongodb",
-          9200  : "elasticsearch",
-          3128  : "squid-proxy?",
-          8080  : "proxy?" ,
-          8118  : "proxy?" ,
-          8000  : "proxy?" ,
-          9878  : "richochet",
-          666   : "hail satan!",
-          31337 : "eleet",
-          1337  : "eleet",
-          69    : "good times",
-          6969  : "double the fun",
-          1234  : "patterns rule",
-          12345 : "patterns rule",
-        }
 
 def pop_or_none(l):
     if len(l) == 0:
         return None
     return l.pop()
 
-
-def get_service_name(port):
-    return PORTS.get(port)
 
 class PortScannerClient(Protocol):
     def connectionMade(self):
@@ -120,7 +96,9 @@ class Connection:
 
 
     def connect(self):
-        torEndpoint = TCP4ClientEndpoint(reactor, TOR_HOST, TOR_PORT)
+        #Generate a random int between 0 and 4 (include) to know which Tor Host we will use.
+        index= random.randint(0,4)
+        torEndpoint = TCP4ClientEndpoint(reactor, TOR_HOSTS[index][0], TOR_HOSTS[index][1])
         proxiedEndpoint = SOCKS5ClientEndpoint(self.active_host.hostname.encode("ascii"), self.current_port, torEndpoint)
         d = proxiedEndpoint.connect(PortScannerClientFactory(self))
         d.addCallback(gotProtocol, self)

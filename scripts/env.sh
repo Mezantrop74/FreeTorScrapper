@@ -10,6 +10,12 @@ export PYTHONPATH=$PYTHONPATH:$BASEDIR/lib
 . $ETCDIR/proxy
 export HIDDEN_SERVICE_PROXY_HOST
 export HIDDEN_SERVICE_PROXY_PORT
+export HIDDEN_SERVICE_PROXY_HOST2
+export HIDDEN_SERVICE_PROXY_PORT2
+export HIDDEN_SERVICE_PROXY_HOST3
+export HIDDEN_SERVICE_PROXY_PORT3
+export HIDDEN_SERVICE_PROXY_HOST4
+export HIDDEN_SERVICE_PROXY_PORT4
 
 . $ETCDIR/database
 export DB_HOST
@@ -30,8 +36,11 @@ export MAX_RESULT_LIMIT
 export SITE_PATH
 export SITE_DOMAIN
 
-. $ETCDIR/private/flask.secret
-export FLASK_SECRET
+### Check if flask.secret exist ###
+if [ -f "$ETCDIR/private/flask.secret" ]; then
+    . $ETCDIR/private/flask.secret
+    export FLASK_SECRET
+fi
 
 . $ETCDIR/memcached
 export MEMCACHED_ENABLED
