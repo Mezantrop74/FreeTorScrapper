@@ -1,5 +1,14 @@
 # Fresh Onions TOR Hidden Service Crawler
 
+## Archival Notice
+
+This project has been archived and is no longer maintained.
+Rationale behind this choice is [described in this blog post](https://www.gosecure.net/blog/drugs-guns-fake-documents-hitmen-what-i-expected-and-much-more).
+If you are interested in taking over maintenance we will happily refer any active fork here.
+[Contact us](https://twitter.com/gosecure_inc).
+
+<hr/>
+
 This is a copy of the source for the http://zlal32teyptf4tvi.onion hidden service, which implements a tor hidden service crawler/spider and website.
 
 ## Features
