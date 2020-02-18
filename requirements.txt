@@ -1,3 +1,4 @@
+idna<2.9,>=2.5
 scrapy
 pony==0.7.3
 PyMySQL
@@ -8,7 +9,7 @@ elasticsearch-dsl>=5.0.0,<6.0.0
 python-dateutil
 Twisted
 txsocksx
-numpy
+numpy<=1.16.1,>=1.11.3
 scipy
 scikit-learn
 tabulate
